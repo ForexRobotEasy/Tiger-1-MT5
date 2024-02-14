@@ -1,0 +1,122 @@
+
+//+------------------------------------------------------------------+
+//|                                                     Tiger 1 MT5  |
+//|                                              forexroboteasy.com  |
+//|                                      Developed by Forex Robot Easy Team  |
+//+------------------------------------------------------------------+
+
+//--- Expert Advisor initialization function
+int OnInit()
+{
+   //--- Set trading parameters
+   Symbol('XAUUSD');  // Set the symbol to trade (gold)
+   Period(Period_M15);  // Set the timeframe to 15 minutes
+
+   //--- Add necessary indicators and their parameters
+   iMA(Symbol(), Period(), 14, 0, MODE_EMA, PRICE_CLOSE);  // Add a 14-period EMA
+
+   return(INIT_SUCCEEDED);  // Successful initialization
+}
+
+//--- Expert Advisor start function
+void OnTick()
+{
+   //--- Check for a new trend
+   double ema14 = iMA(Symbol(), Period(), 14, 0, MODE_EMA, PRICE_CLOSE);  // Calculate the 14-period EMA
+   double ema15 = iMA(Symbol(), Period(), 15, 0, MODE_EMA, PRICE_CLOSE);  // Calculate the 15-period EMA
+   bool isUpTrend = ema14 > ema15;  // Determine if it's an uptrend
+
+   //--- Execute trades based on the trend
+   if (isUpTrend)
+   {
+      //--- Check if there is an open trade
+      if (OrdersTotal() == 0)
+      {
+         //--- Open a buy trade
+         double lotSize = 0.01;  // Set the lot size
+         double stopLoss = 50;  // Set the stop loss in pips
+         double takeProfit = 100;  // Set the take profit in pips
+         int ticket = OrderSend(Symbol(), OP_BUY, lotSize, Ask, 0, Bid - stopLoss * Point, Bid + takeProfit * Point);
+         if (ticket > 0)
+         {
+            //--- Trade executed successfully
+            Print('Buy trade executed: Ticket=', ticket);
+         }
+         else
+         {
+            //--- Trade execution failed
+            Print('Buy trade execution failed: Error=', GetLastError());
+         }
+      }
+   }
+   else
+   {
+      //--- Check if there is an open trade
+      if (OrdersTotal() == 0)
+      {
+         //--- Open a sell trade
+         double lotSize = 0.01;  // Set the lot size
+         double stopLoss = 50;  // Set the stop loss in pips
+         double takeProfit = 100;  // Set the take profit in pips
+         int ticket = OrderSend(Symbol(), OP_SELL, lotSize, Bid, 0, Ask + stopLoss * Point, Ask - takeProfit * Point);
+         if (ticket > 0)
+         {
+            //--- Trade executed successfully
+            Print('Sell trade executed: Ticket=', ticket);
+         }
+         else
+         {
+            //--- Trade execution failed
+            Print('Sell trade execution failed: Error=', GetLastError());
+         }
+      }
+   }
+}
+
+//--- Expert Advisor deinitialization function
+void OnDeinit(const int reason)
+{
+   //--- Perform necessary cleanup tasks
+}
+
+//--- Fail-safe mechanism
+void OnTrade()
+{
+   //--- Check if a trade has resulted in a loss
+   if (OrderProfit() < 0)
+   {
+      //--- Calculate the grid size based on the account balance
+      double accountBalance = AccountBalance();
+      double gridStep = accountBalance * 0.01;  // Set the grid step as 1% of the account balance
+
+      //--- Open an additional trade in the opposite direction
+      if (OrderType() == OP_BUY)
+      {
+         int ticket = OrderSend(Symbol(), OP_SELL, OrderLots(), Bid, 0, Bid + gridStep * Point, Bid - gridStep * Point);
+         if (ticket > 0)
+         {
+            //--- Additional trade executed successfully
+            Print('Additional sell trade executed: Ticket=', ticket);
+         }
+         else
+         {
+            //--- Additional trade execution failed
+            Print('Additional sell trade execution failed: Error=', GetLastError());
+         }
+      }
+      else if (OrderType() == OP_SELL)
+      {
+         int ticket = OrderSend(Symbol(), OP_BUY, OrderLots(), Ask, 0, Ask - gridStep * Point, Ask + gridStep * Point);
+         if (ticket > 0)
+         {
+            //--- Additional trade executed successfully
+            Print('Additional buy trade executed: Ticket=', ticket);
+         }
+         else
+         {
+            //--- Additional trade execution failed
+            Print('Additional buy trade execution failed: Error=', GetLastError());
+         }
+      }
+   }
+}
